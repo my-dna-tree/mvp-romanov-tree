@@ -1,0 +1,74 @@
+
+
+body, svg {
+  margin: 0;
+  padding: 0;
+}
+/* svg {
+  margin: 0;
+  padding: 0;
+} */
+.label {
+  stroke: #660000;
+  fill: #660000;
+}
+.node {
+  cursor: pointer;
+}
+.circleAlive {
+  fill: rgb(82, 204, 34);
+}
+.circleDead {
+  fill: rgb(105, 105, 105);
+}
+text {
+  font-family:'Courier New', Courier, monospace;
+  font-size: 10px;
+  text-shadow: rgb(215, 255, 213) 0 0 2px;
+}
+.test1 {
+  font-family:'Courier New', Courier, monospace;
+  font-size: 10px;
+  text-shadow: rgb(215, 255, 213) 0 0 2px;
+}
+.links {
+  stroke-width: 2px;
+}
+.y-dna-link {
+  stroke: rgb(9, 160, 230);
+  fill: rgb(9, 160, 230);
+}
+.mt-dna-link {
+  stroke: rgb(230, 9, 230);
+}
+.x-dna-link {
+  stroke: rgb(116, 230, 9);
+}
+.y-dna-arrow {
+  fill: rgb(9, 160, 230);
+}
+.mt-dna-arrow {
+  fill: rgb(230, 9, 230);
+}
+.x-dna-arrow {
+  fill: rgb(116, 230, 9);
+}
+
+  /*sans-serif;*/
+
+/*.link line links {
+  stroke-width: 1.5px;
+}*/
+
+  /*stroke: #000;*/
+  /*stroke-opacity: 0.6;*/
+
+/*.node nodes circle {
+  stroke: #000;
+  stroke-width: 1.5px;
+}*/
+
+/*.circle {
+  stroke: #0f0;
+  stroke-width: 0.5px;
+}*/

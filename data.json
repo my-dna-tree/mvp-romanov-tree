@@ -1,0 +1,33 @@
+[
+  {
+    "id": 0,
+    "name": "Пётр I Алексеевич",
+    "img": "0.png",
+    "isMale" : true,
+    "birthDate": "16720609",
+    "deathDate" : "17250208",
+    "mother": null,
+    "father": null
+  },
+  {
+    "id": 1,
+    "name": "Лопухина Евдокия Фёдоровна",
+    "img": "1.png",
+    "isMale" : false,
+    "birthDate": "16690809",
+    "deathDate" : "17310907",
+    "mother": null,
+    "father": null
+  },
+  {
+    "id": 2,
+    "name": "Алексей Петрович",
+    "img": "2.png",
+    "isMale" : false,
+    "birthDate": "16900228",
+    "deathDate" : "17180707",
+    "mother": 1,
+    "father": 0
+  }
+  
+]
