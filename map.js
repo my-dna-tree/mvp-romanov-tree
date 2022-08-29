@@ -19,10 +19,10 @@ d3.json("./data.json", function(error, nodes_data) {
 
     var image_path = './img/',
         radius = 27
-        strength = -1000
-        distance = 100;
-    var lastBirth = 1700; // default
-    var firstBirth = 1650;
+        strength = -2000
+        distance = 150;
+    var lastBirth = 1720; // default
+    var firstBirth = 1664;
         // var center_x = width / 2,
         // center_y = height / 2;
 

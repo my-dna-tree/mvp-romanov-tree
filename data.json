@@ -23,10 +23,40 @@
     "id": 2,
     "name": "Алексей Петрович",
     "img": "2.png",
-    "isMale" : false,
+    "isMale" : true,
     "birthDate": "16900228",
     "deathDate" : "17180707",
     "mother": 1,
+    "father": 0
+  },
+  {
+    "id": 3,
+    "name": "Екатерина I Алексеевна",
+    "img": "3.png",
+    "isMale" : false,
+    "birthDate": "16840415",
+    "deathDate" : "17270517",
+    "mother": null,
+    "father": null
+  },
+  {
+    "id": 4,
+    "name": "Елизавета Петровна",
+    "img": "4.png",
+    "isMale" : false,
+    "birthDate": "17091229",
+    "deathDate" : "17620105",
+    "mother": 3,
+    "father": 0
+  },
+  {
+    "id": 5,
+    "name": "Анна Петровна",
+    "img": "5.png",
+    "isMale" : false,
+    "birthDate": "17080207",
+    "deathDate" : "17280515",
+    "mother": 3,
     "father": 0
   }
   
