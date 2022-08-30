@@ -16,3 +16,5 @@ This is demo version of ancestral ties
 
     pip3 install http
     python3 -m http.server 80
+
+## Or just visit <https://my-dna-tree.org>
