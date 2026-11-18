@@ -268,6 +268,20 @@ d3.json("./data.json", function(error, nodes_data) {
 
     drag_handler(node);
 
+    // Перетаскивание фона прокручивает страницу. d3.drag на узлах останавливает всплытие mousedown, сюда доходит только фон
+    svg.on("mousedown.pan", function() {
+        if (d3.event.button !== 0) return;
+        var x0 = d3.event.clientX, y0 = d3.event.clientY;
+        d3.event.preventDefault(); // без выделения текста
+        d3.select(window)
+            .on("mousemove.pan", function() {
+                window.scrollBy(x0 - d3.event.clientX, y0 - d3.event.clientY);
+                x0 = d3.event.clientX;
+                y0 = d3.event.clientY;
+            })
+            .on("mouseup.pan", function() { d3.select(window).on(".pan", null); });
+    });
+
 
     /** Functions **/
 

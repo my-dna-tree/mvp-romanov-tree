@@ -9,6 +9,12 @@ body, svg {
   margin: 0;
   padding: 0;
 } */
+svg {
+  cursor: grab;
+}
+svg:active {
+  cursor: grabbing;
+}
 .label {
   stroke: #660000;
   fill: #660000;
