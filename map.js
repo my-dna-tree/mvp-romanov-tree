@@ -66,12 +66,13 @@ d3.json("./data.json", function(error, nodes_data) {
 
     function draw() {
         var v_max = virtual_years[virtual_years.length - 1];
-        width = window.innerWidth,
         height = Math.max(window.innerHeight - header_height - footer_height, v_max * px_per_year);
-        center_x = width / 2,
-        center_y = height / 2,
-        svg.attr("width", width);
         svg.attr("height", height);
+        // ширина без вертикального скроллбара: высота уже выставлена, скроллбар уже на месте. innerWidth его включает и даёт горизонтальный скролл
+        width = document.documentElement.clientWidth;
+        svg.attr("width", width);
+        center_x = width / 2;
+        center_y = height / 2;
         y_scale.range(virtual_years.map(v => 50 + v / v_max * (height - 140))); // отступы под подписи узлов
         center_force = d3.forceCenter(center_x, center_y);
         simulation
@@ -83,7 +84,7 @@ d3.json("./data.json", function(error, nodes_data) {
             .force("box_force", box_force);
         draw_y_years();
 
-        simulation.alphaTarget(0.3).restart();
+        simulation.alpha(1).restart(); // не alphaTarget: он держит симуляцию горячей вечно и узлы дрожат, пока drag_end не сбросит его в 0
     }
 
     function draw_y_years() {
