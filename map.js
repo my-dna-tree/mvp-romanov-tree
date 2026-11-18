@@ -55,11 +55,14 @@ d3.json("./data.json", function(error, nodes_data) {
     // ponytail: на сжатом участке подписи лет идут неравномерно, добавить маркер разрыва если будет путать
     var max_gap = 20;
     var px_per_year = 6; // минимум пикселей на год: при большом дереве svg выше окна, страница скроллится
-    var years = nodes_data.map(d => d.birthYear).sort((a, b) => a - b)
-        .filter((y, i, a) => i === 0 || y !== a[i - 1]);
+    var crowd_years = 3; // доп. "виртуальные годы" на каждого родившегося: плотные периоды растягиваются
+    var born = {};
+    nodes_data.forEach(d => born[d.birthYear] = (born[d.birthYear] || 0) + 1);
+    var years = Object.keys(born).map(Number).sort((a, b) => a - b);
     var virtual_years = [0];
     for (var i = 1; i < years.length; i++) {
-        virtual_years.push(virtual_years[i - 1] + Math.min(years[i] - years[i - 1], max_gap));
+        virtual_years.push(virtual_years[i - 1] + Math.min(years[i] - years[i - 1], max_gap)
+            + crowd_years * (born[years[i - 1]] + born[years[i]]) / 2);
     }
     var y_scale = d3.scaleLinear().domain(years);
 
