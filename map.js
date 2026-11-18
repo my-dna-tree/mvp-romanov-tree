@@ -54,6 +54,7 @@ d3.json("./data.json", function(error, nodes_data) {
     // Шкала времени по Y: кусочно-линейная, пустые промежутки длиннее max_gap лет сжимаются до max_gap
     // ponytail: на сжатом участке подписи лет идут неравномерно, добавить маркер разрыва если будет путать
     var max_gap = 20;
+    var px_per_year = 6; // минимум пикселей на год: при большом дереве svg выше окна, страница скроллится
     var years = nodes_data.map(d => d.birthYear).sort((a, b) => a - b)
         .filter((y, i, a) => i === 0 || y !== a[i - 1]);
     var virtual_years = [0];
@@ -64,19 +65,20 @@ d3.json("./data.json", function(error, nodes_data) {
 
 
     function draw() {
+        var v_max = virtual_years[virtual_years.length - 1];
         width = window.innerWidth,
-        height = window.innerHeight - header_height - footer_height;
+        height = Math.max(window.innerHeight - header_height - footer_height, v_max * px_per_year);
         center_x = width / 2,
         center_y = height / 2,
         svg.attr("width", width);
         svg.attr("height", height);
-        var v_max = virtual_years[virtual_years.length - 1];
         y_scale.range(virtual_years.map(v => 50 + v / v_max * (height - 140))); // отступы под подписи узлов
         center_force = d3.forceCenter(center_x, center_y);
         simulation
             .force("charge_force", charge_force)
             .force("center_force", center_force)
             .force("link", link_force)
+            .force("collide", d3.forceCollide(60).iterations(4)) // разводит ровесников (братья/сёстры) по горизонтали
             .force("generation_force", generation_force)
             .force("box_force", box_force);
         draw_y_years();
@@ -120,9 +122,9 @@ d3.json("./data.json", function(error, nodes_data) {
 
     var simulation = d3.forceSimulation().nodes(nodes_data);
 
-    var link_force =  d3.forceLink(links_data).id(function(d) { return d.id; }).strength(1).distance(distance);
+    var link_force =  d3.forceLink(links_data).id(function(d) { return d.id; }).distance(distance); // сила по умолчанию 1/число связей: у многодетных родителей дети не стягиваются в одну точку
 
-    var charge_force = d3.forceManyBody().strength(strength);
+    var charge_force = d3.forceManyBody().strength(strength).distanceMax(400); // отталкивание только соседей, иначе крайние поколения прижимает к краям
 
     var center_force = d3.forceCenter(center_x, center_y);
 
@@ -133,7 +135,9 @@ d3.json("./data.json", function(error, nodes_data) {
         for (var i = 0, n = nodes_data.length; i < n; ++i) {
             curr_node = nodes_data[i];
             bbox = d3.select("#id".concat(curr_node.id)).node().getBBox(); // height / width
-            curr_node.x = Math.max(bbox.width/2+5, Math.min(width - bbox.width, curr_node.x));
+            var x_min = bbox.width/2+5, x_max = width - bbox.width;
+            curr_node.x = Math.max(x_min, Math.min(x_max, curr_node.x));
+            curr_node.vx = Math.max(x_min - curr_node.x, Math.min(x_max - curr_node.x, curr_node.vx)); // иначе скорость выносит узел за край
             curr_node.y = Math.max(bbox.height/2, Math.min(height - bbox.height, curr_node.y));
         }
     }
@@ -244,9 +248,7 @@ d3.json("./data.json", function(error, nodes_data) {
         .text(function(d) {
             return d.deathDate !== null ? d.birthDate.concat(" - ").concat(d.deathDate) : d.birthDate;
         })
-        .attr('x', function(d) {
-            return d.deathDate !== null ? -((8+3+8)*6/2) : -(8*6/2); // %)
-        })
+        .attr('text-anchor', 'middle') // даты бывают неполные (только год)
         .attr('y', 37+16);
 
     node.append("title")
