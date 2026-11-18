@@ -56,15 +56,22 @@ d3.json("./data.json", function(error, nodes_data) {
     var max_gap = 20;
     var px_per_year = 6; // минимум пикселей на год: при большом дереве svg выше окна, страница скроллится
     var crowd_years = 3; // доп. "виртуальные годы" на каждого родившегося: плотные периоды растягиваются
-    var born = {};
-    nodes_data.forEach(d => born[d.birthYear] = (born[d.birthYear] || 0) + 1);
-    var years = Object.keys(born).map(Number).sort((a, b) => a - b);
-    var virtual_years = [0];
-    for (var i = 1; i < years.length; i++) {
-        virtual_years.push(virtual_years[i - 1] + Math.min(years[i] - years[i - 1], max_gap)
-            + crowd_years * (born[years[i - 1]] + born[years[i]]) / 2);
+    var years, virtual_years, y_scale = d3.scaleLinear();
+
+    // Шкала строится по переданным узлам: всё дерево или только видимые в режиме фокуса
+    function build_scale(nodes) {
+        var born = {};
+        nodes.forEach(d => born[d.birthYear] = (born[d.birthYear] || 0) + 1);
+        years = Object.keys(born).map(Number).sort((a, b) => a - b);
+        if (years.length === 1) years.push(years[0] + 1); // scaleLinear с одной точкой домена даёт NaN
+        virtual_years = [0];
+        for (var i = 1; i < years.length; i++) {
+            virtual_years.push(virtual_years[i - 1] + Math.min(years[i] - years[i - 1], max_gap)
+                + crowd_years * ((born[years[i - 1]] || 0) + (born[years[i]] || 0)) / 2);
+        }
+        y_scale.domain(years);
     }
-    var y_scale = d3.scaleLinear().domain(years);
+    build_scale(nodes_data);
 
 
     function draw() {
@@ -306,9 +313,13 @@ d3.json("./data.json", function(error, nodes_data) {
             .classed("focused", n => n === focus);
         link.style("display", l => keep_link(l) ? null : "none");
         // скрытые узлы убираем из симуляции, иначе их отталкивание раздвигает оставшихся
-        simulation.nodes(nodes_data.filter(n => keep.has(n)));
+        var visible = nodes_data.filter(n => keep.has(n));
+        simulation.nodes(visible);
         link_force.links(links_data.filter(keep_link));
-        simulation.alpha(1).restart();
+        build_scale(visible); // высота svg и подписи лет — под видимую часть дерева
+        draw();
+        // высота страницы изменилась: возвращаем в поле зрения карточку, по которой кликнули
+        window.scrollTo(window.scrollX, y_scale(d.birthYear) - window.innerHeight / 2);
     }
 
     d3.select(window).on("keydown.focus", function() {
