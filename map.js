@@ -15,14 +15,12 @@ d3.json("./data.json", function(error, nodes_data) {
         height,
         center_x,
         center_y,
-        one_year_in_pixels;
+        y_scale;
 
     var image_path = './img/',
         radius = 27
         strength = -2000
         distance = 150;
-    var lastBirth = 1720; // default
-    var firstBirth = 1664;
         // var center_x = width / 2,
         // center_y = height / 2;
 
@@ -53,14 +51,16 @@ d3.json("./data.json", function(error, nodes_data) {
         element.birthYear = parseInt(element.birthDate.substr(0,4), 10);
     });
 
-    // Получаем самую старую и новую даты рождения
-
-    nodes_data.forEach(element => {
-        if (element.birthYear !== null) {
-            lastBirth = (lastBirth < parseInt(element.birthYear)) ? parseInt(element.birthYear) : lastBirth;
-            firstBirth = (firstBirth > parseInt(element.birthYear)) ? parseInt(element.birthYear) : firstBirth;
-        }
-    });
+    // Шкала времени по Y: кусочно-линейная, пустые промежутки длиннее max_gap лет сжимаются до max_gap
+    // ponytail: на сжатом участке подписи лет идут неравномерно, добавить маркер разрыва если будет путать
+    var max_gap = 20;
+    var years = nodes_data.map(d => d.birthYear).sort((a, b) => a - b)
+        .filter((y, i, a) => i === 0 || y !== a[i - 1]);
+    var virtual_years = [0];
+    for (var i = 1; i < years.length; i++) {
+        virtual_years.push(virtual_years[i - 1] + Math.min(years[i] - years[i - 1], max_gap));
+    }
+    var y_scale = d3.scaleLinear().domain(years);
 
 
     function draw() {
@@ -70,7 +70,8 @@ d3.json("./data.json", function(error, nodes_data) {
         center_y = height / 2,
         svg.attr("width", width);
         svg.attr("height", height);
-        one_year_in_pixels = height/(lastBirth - firstBirth);
+        var v_max = virtual_years[virtual_years.length - 1];
+        y_scale.range(virtual_years.map(v => 50 + v / v_max * (height - 140))); // отступы под подписи узлов
         center_force = d3.forceCenter(center_x, center_y);
         simulation
             .force("charge_force", charge_force)
@@ -113,9 +114,7 @@ d3.json("./data.json", function(error, nodes_data) {
                 .attr("x", width - 30)
                 .attr('text-anchor', 'middle')
                 //.attr("class", "myLabel")
-                .text(parseInt(
-                    (i*interval_in_px + padding) / one_year_in_pixels + firstBirth
-                ));
+                .text(parseInt(y_scale.invert(padding + i*interval_in_px)));
         }
     }
 
@@ -143,7 +142,8 @@ d3.json("./data.json", function(error, nodes_data) {
     function generation_force(alpha) {
         for (var i = 0, n = nodes_data.length; i < n; ++i) {
             curr_node = nodes_data[i];
-            curr_node.y = (curr_node.birthYear - firstBirth) * one_year_in_pixels;
+            curr_node.y = y_scale(curr_node.birthYear);
+            curr_node.vy = 0; // иначе charge/link сдвигают узел и он уезжает от своей отметки на шкале
         }
     }
 
@@ -250,7 +250,7 @@ d3.json("./data.json", function(error, nodes_data) {
         .attr('y', 37+16);
 
     node.append("title")
-        .text(function(d) { return d.name; });
+        .text(function(d) { return d.description ? d.name + "\n" + d.description : d.name; });
 
     var image = node.append("svg:image")
         .attr("xlink:href",  function(d) { return image_path + d.img;})
