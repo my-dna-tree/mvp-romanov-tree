@@ -22,6 +22,10 @@ svg:active {
 .node {
   cursor: pointer;
 }
+.focused circle {
+  stroke: rgb(255, 140, 0);
+  stroke-width: 4px;
+}
 .circleAlive {
   fill: rgb(82, 204, 34);
 }
