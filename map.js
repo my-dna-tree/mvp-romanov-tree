@@ -69,12 +69,13 @@ d3.json("./data.json", function(error, nodes_data) {
 
     function draw() {
         var v_max = virtual_years[virtual_years.length - 1];
-        width = window.innerWidth,
         height = Math.max(window.innerHeight - header_height - footer_height, v_max * px_per_year);
-        center_x = width / 2,
-        center_y = height / 2,
-        svg.attr("width", width);
         svg.attr("height", height);
+        // ширина без вертикального скроллбара: высота уже выставлена, скроллбар уже на месте. innerWidth его включает и даёт горизонтальный скролл
+        width = document.documentElement.clientWidth;
+        svg.attr("width", width);
+        center_x = width / 2;
+        center_y = height / 2;
         y_scale.range(virtual_years.map(v => 50 + v / v_max * (height - 140))); // отступы под подписи узлов
         center_force = d3.forceCenter(center_x, center_y);
         simulation
@@ -86,7 +87,7 @@ d3.json("./data.json", function(error, nodes_data) {
             .force("box_force", box_force);
         draw_y_years();
 
-        simulation.alphaTarget(0.3).restart();
+        simulation.alpha(1).restart(); // не alphaTarget: он держит симуляцию горячей вечно и узлы дрожат, пока drag_end не сбросит его в 0
     }
 
     function draw_y_years() {
@@ -135,8 +136,9 @@ d3.json("./data.json", function(error, nodes_data) {
 
     // Не даем выходить g node(считаем высоту/ширину) за рамки svg
     function box_force(alpha) {
-        for (var i = 0, n = nodes_data.length; i < n; ++i) {
-            curr_node = nodes_data[i];
+        var nodes = simulation.nodes(); // в режиме фокуса только видимые
+        for (var i = 0, n = nodes.length; i < n; ++i) {
+            curr_node = nodes[i];
             bbox = d3.select("#id".concat(curr_node.id)).node().getBBox(); // height / width
             var x_min = bbox.width/2+5, x_max = width - bbox.width;
             curr_node.x = Math.max(x_min, Math.min(x_max, curr_node.x));
@@ -147,21 +149,14 @@ d3.json("./data.json", function(error, nodes_data) {
 
     // Вытягиваем карту по дате рождения по вертикали
     function generation_force(alpha) {
-        for (var i = 0, n = nodes_data.length; i < n; ++i) {
-            curr_node = nodes_data[i];
+        var nodes = simulation.nodes();
+        for (var i = 0, n = nodes.length; i < n; ++i) {
+            curr_node = nodes[i];
             curr_node.y = y_scale(curr_node.birthYear);
             curr_node.vy = 0; // иначе charge/link сдвигают узел и он уезжает от своей отметки на шкале
         }
     }
 
-    function showModalCard(d) {
-        $( ".modal-body" ).empty();
-        $('#modalCard').modal('show');
-        // $('#modalCard').modal({show: true});
-        $('#modalCardH2').text(d.name);
-        $( '.modal-body' ).prepend('<img width="150" height="150" src=' + image_path + d.img +' />')
-        $( ".modal-body" ).append( "<p>" + d.birthDate + " - " + d.deathDate + "</p>" )
-    }
     // simulation
     //     .force("charge_force", charge_force)
     //     .force("center_force", center_force)
@@ -228,9 +223,7 @@ d3.json("./data.json", function(error, nodes_data) {
         .data(nodes_data)
         .enter().append("g")
             .attr("id", function(d) { return 'id'.concat(d.id); })
-            .on("click", function(d) {
-                showModalCard(d)
-            })
+            .on("click", set_focus)
             .attr("class", "node");
 
     var circle = node
@@ -265,6 +258,7 @@ d3.json("./data.json", function(error, nodes_data) {
         .attr("width", radius*2-4);
 
     var drag_handler = d3.drag()
+        .clickDistance(5) // по умолчанию 0: дрожание мыши на 1px превращает клик в drag и клик теряется
         .on("start", drag_start)
         .on("drag", drag_drag)
         .on("end", drag_end);
@@ -285,6 +279,41 @@ d3.json("./data.json", function(error, nodes_data) {
             .on("mouseup.pan", function() { d3.select(window).on(".pan", null); });
     });
 
+    // Режим фокуса: клик по карточке оставляет только прямых родственников (предки + потомки),
+    // повторный клик по той же карточке или Esc возвращают всё дерево
+    var by_id = {}, children = {}, focus = null;
+    nodes_data.forEach(d => { by_id[d.id] = d; children[d.id] = []; });
+    nodes_data.forEach(d => [d.father, d.mother].forEach(p => { if (p !== null) children[p].push(d); }));
+
+    function kin(d) {
+        var keep = new Set([d]);
+        (function up(n) {
+            [n.father, n.mother].forEach(p => {
+                if (p !== null && !keep.has(by_id[p])) { keep.add(by_id[p]); up(by_id[p]); }
+            });
+        })(d);
+        (function down(n) {
+            children[n.id].forEach(c => { if (!keep.has(c)) { keep.add(c); down(c); } });
+        })(d);
+        return keep;
+    }
+
+    function set_focus(d) {
+        focus = focus === d ? null : d;
+        var keep = focus ? kin(focus) : new Set(nodes_data);
+        var keep_link = l => keep.has(l.source) && keep.has(l.target);
+        node.style("display", n => keep.has(n) ? null : "none")
+            .classed("focused", n => n === focus);
+        link.style("display", l => keep_link(l) ? null : "none");
+        // скрытые узлы убираем из симуляции, иначе их отталкивание раздвигает оставшихся
+        simulation.nodes(nodes_data.filter(n => keep.has(n)));
+        link_force.links(links_data.filter(keep_link));
+        simulation.alpha(1).restart();
+    }
+
+    d3.select(window).on("keydown.focus", function() {
+        if (d3.event.key === "Escape" && focus) set_focus(focus);
+    });
 
     /** Functions **/
 
