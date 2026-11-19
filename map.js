@@ -10,6 +10,7 @@ d3.json("./data.json", function(error, nodes_data) {
     var height = window.innerHeight - header_height - footer_height;
 
     var svg = d3.select("svg");
+    var card = d3.select("#card"), card_box = null; // карточка описания в режиме фокуса и её прямоугольник в координатах svg
 
     var width,
         height,
@@ -93,8 +94,19 @@ d3.json("./data.json", function(error, nodes_data) {
             .force("generation_force", generation_force)
             .force("box_force", box_force);
         draw_y_years();
+        place_card();
 
         simulation.alpha(1).restart(); // не alphaTarget: он держит симуляцию горячей вечно и узлы дрожат, пока drag_end не сбросит его в 0
+    }
+
+    // Карточка стоит у левого края на высоте узла в фокусе, без физики. Узлы под неё не заходят (box_force)
+    function place_card() {
+        card_box = null;
+        if (!focus) return;
+        var el = card.node(), h = el.offsetHeight;
+        var top = Math.max(5, Math.min(height - h - 5, y_scale(focus.birthYear) - h / 2));
+        card.style("top", top + "px");
+        card_box = {top: top, bottom: top + h, right: el.offsetLeft + el.offsetWidth};
     }
 
     function draw_y_years() {
@@ -106,6 +118,19 @@ d3.json("./data.json", function(error, nodes_data) {
 
         svg.selectAll("#y_year").remove();
         svg.selectAll("#arrow_names").remove();
+        svg.selectAll("#lifespan").remove();
+
+        // Годы жизни человека в фокусе — полоса за подписями шкалы. Жив — до текущего года, дата смерти "?" — только отметка рождения
+        if (focus) {
+            var end = focus.deathDate === null ? new Date().getFullYear()
+                : focus.deathDate === "?" ? focus.birthYear : parseInt(focus.deathDate.substr(0, 4), 10);
+            var y0 = y_scale(focus.birthYear), y1 = Math.min(height, y_scale(end)); // год смерти позже последнего рождения — шкала экстраполирует
+            svg.append("rect")
+                .attr("id", "lifespan")
+                .attr("x", width - 46).attr("width", 32)
+                .attr("y", y0).attr("height", Math.max(4, y1 - y0)) // rect нулевой высоты не рисуется
+                .attr("rx", 4);
+        }
 
         var i = 10;
         ['y-dna', 'x-dna', 'mt-dna'].forEach(element => {
@@ -148,6 +173,9 @@ d3.json("./data.json", function(error, nodes_data) {
             curr_node = nodes[i];
             bbox = d3.select("#id".concat(curr_node.id)).node().getBBox(); // height / width
             var x_min = bbox.width/2+5, x_max = width - bbox.width;
+            var top = curr_node.y + bbox.y, gap = 10;
+            if (card_box && top < card_box.bottom + gap && top + bbox.height > card_box.top - gap)
+                x_min = Math.max(x_min, card_box.right + gap + bbox.width/2); // узел на высоте карточки — отодвигаем правее неё
             curr_node.x = Math.max(x_min, Math.min(x_max, curr_node.x));
             curr_node.vx = Math.max(x_min - curr_node.x, Math.min(x_max - curr_node.x, curr_node.vx)); // иначе скорость выносит узел за край
             curr_node.y = Math.max(bbox.height/2, Math.min(height - bbox.height, curr_node.y));
@@ -223,6 +251,10 @@ d3.json("./data.json", function(error, nodes_data) {
         .attr("class", function(d) { return d.dna_type.concat('-dna-link'); })
         .attr("marker-end", function(d) { return "url(#triangle-".concat(d.dna_type).concat(")"); });
         // .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+    var card_line = svg.append("line") // от карточки к узлу в фокусе
+        .attr("class", "card-line")
+        .style("display", "none");
 
     var node = svg.append("g")
         .attr("class", "nodes")
@@ -312,6 +344,8 @@ d3.json("./data.json", function(error, nodes_data) {
         node.style("display", n => keep.has(n) ? null : "none")
             .classed("focused", n => n === focus);
         link.style("display", l => keep_link(l) ? null : "none");
+        card.style("display", focus ? "block" : null).text(focus ? focus.description : "");
+        card_line.style("display", focus ? null : "none");
         // скрытые узлы убираем из симуляции, иначе их отталкивание раздвигает оставшихся
         var visible = nodes_data.filter(n => keep.has(n));
         simulation.nodes(visible);
@@ -395,6 +429,12 @@ d3.json("./data.json", function(error, nodes_data) {
             .attr("y1", function(d) { return d.source.y; })
             .attr("x2", function(d) { return d.target.x; })
             .attr("y2", function(d) { return d.target.y; });
+
+        // конец у карточки скользит по её правому краю за узлом: горизонталь, пока узел на высоте карточки,
+        // дальше линия тянется наискось от угла. Конец у узла — в центре, кружок перекрывает линию
+        if (focus) card_line
+            .attr("x1", card_box.right).attr("y1", Math.max(card_box.top + 6, Math.min(card_box.bottom - 6, focus.y)))
+            .attr("x2", focus.x).attr("y2", focus.y);
     }
 
 

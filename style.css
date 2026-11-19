@@ -26,6 +26,28 @@ svg:active {
   stroke: rgb(255, 140, 0);
   stroke-width: 4px;
 }
+#card {
+  display: none;
+  position: absolute; /* svg в левом верхнем углу страницы: координаты совпадают */
+  left: 10px;
+  width: 240px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: #fff;
+  border: 2px solid rgb(255, 140, 0);
+  border-radius: 6px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+}
+#lifespan {
+  fill: rgba(255, 140, 0, 0.2);
+  stroke: rgb(255, 140, 0);
+  stroke-width: 2px;
+}
+.card-line {
+  stroke: rgb(255, 140, 0);
+  stroke-width: 2px;
+}
 .circleAlive {
   fill: rgb(82, 204, 34);
 }
