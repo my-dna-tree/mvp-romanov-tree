@@ -344,7 +344,10 @@ d3.json("./data.json", function(error, nodes_data) {
         node.style("display", n => keep.has(n) ? null : "none")
             .classed("focused", n => n === focus);
         link.style("display", l => keep_link(l) ? null : "none");
-        card.style("display", focus ? "block" : null).text(focus ? focus.description : "");
+        card.style("display", focus ? "block" : null);
+        card.select(".lead").text(focus ? focus.description : "");
+        card.select(".bio").html("");
+        if (focus) load_bio(focus);
         card_line.style("display", focus ? null : "none");
         // скрытые узлы убираем из симуляции, иначе их отталкивание раздвигает оставшихся
         var visible = nodes_data.filter(n => keep.has(n));
@@ -354,6 +357,16 @@ d3.json("./data.json", function(error, nodes_data) {
         draw();
         // высота страницы изменилась: возвращаем в поле зрения карточку, по которой кликнули
         window.scrollTo(window.scrollX, y_scale(d.birthYear) - window.innerHeight / 2);
+    }
+
+    // Подробная биография из bio/<id>.html. Пока грузится или если файла нет — только короткое описание
+    function load_bio(d) {
+        d3.text("bio/" + d.id + ".html", function(error, html) {
+            if (error || focus !== d) return; // успели кликнуть другого
+            card.select(".bio").html(html);
+            place_card(); // карточка выросла: пересчитываем её место и отодвигаем узлы
+            simulation.alpha(0.3).restart();
+        });
     }
 
     d3.select(window).on("keydown.focus", function() {
